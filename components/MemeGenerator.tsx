@@ -2,7 +2,7 @@
 import { useRef, useEffect, useState } from "react";
 
 interface MemeGeneratorProps {
-  image: string; // base64 or data URL
+  image: string;
   botName: string;
   botEmoji: string;
   botColor: string;
@@ -13,7 +13,7 @@ interface MemeGeneratorProps {
 export default function MemeGenerator({ image, botName, botEmoji, botColor, botResponse, onClose }: MemeGeneratorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [memeUrl, setMemeUrl] = useState<string>("");
-  const [copied, setCopied] = useState(false);
+  const [step, setStep] = useState<"preview" | "copied" | "downloaded">("preview");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -24,18 +24,15 @@ export default function MemeGenerator({ image, botName, botEmoji, botColor, botR
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      // Size: fit image to max 800px wide, keep aspect ratio
       const maxW = 800;
       const scale = Math.min(maxW / img.width, 1);
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);
       
-      // Add space for text at bottom
       const textPadding = 20;
       const lineHeight = 24;
       const maxCharsPerLine = Math.floor((w - 40) / 12);
       
-      // Word wrap the bot response
       const words = botResponse.split(" ");
       const lines: string[] = [];
       let currentLine = "";
@@ -49,22 +46,19 @@ export default function MemeGenerator({ image, botName, botEmoji, botColor, botR
       }
       if (currentLine) lines.push(currentLine.trim());
       
-      // Limit to 6 lines
       const displayLines = lines.slice(0, 6);
       if (lines.length > 6) displayLines[5] = displayLines[5] + "...";
       
       const headerHeight = 48;
       const textBlockHeight = headerHeight + (displayLines.length * lineHeight) + textPadding * 2;
-      const totalH = h + textBlockHeight + 40; // 40 for footer
+      const totalH = h + textBlockHeight + 40;
       
       canvas.width = w;
       canvas.height = totalH;
       
-      // Background
       ctx.fillStyle = "#08080c";
       ctx.fillRect(0, 0, w, totalH);
       
-      // Rainbow bar top
       const gradient = ctx.createLinearGradient(0, 0, w, 0);
       gradient.addColorStop(0, "#A855F7");
       gradient.addColorStop(0.25, "#06B6D4");
@@ -74,49 +68,40 @@ export default function MemeGenerator({ image, botName, botEmoji, botColor, botR
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, w, 4);
       
-      // Image with rounded corners effect (draw as is, canvas doesn't do rounded easily)
       ctx.drawImage(img, 0, 4, w, h);
       
-      // Semi-transparent overlay at bottom of image for readability
       const overlayGrad = ctx.createLinearGradient(0, h - 40, 0, h + 4);
       overlayGrad.addColorStop(0, "rgba(8, 8, 12, 0)");
       overlayGrad.addColorStop(1, "rgba(8, 8, 12, 1)");
       ctx.fillStyle = overlayGrad;
       ctx.fillRect(0, h - 40, w, 44);
       
-      // Text block background
       ctx.fillStyle = "#08080c";
       ctx.fillRect(0, h + 4, w, textBlockHeight + 40);
       
-      // Bot name header
       const headerY = h + 4 + textPadding;
       ctx.font = "bold 18px 'Arial', sans-serif";
       ctx.fillStyle = botColor;
       ctx.fillText(`${botEmoji} ${botName}:`, 20, headerY + 14);
       
-      // Bot response text
       ctx.font = "16px 'Courier New', monospace";
       ctx.fillStyle = "#e0e0e0";
       displayLines.forEach((line, i) => {
         ctx.fillText(line, 20, headerY + headerHeight + (i * lineHeight));
       });
       
-      // Footer
       const footerY = totalH - 28;
       ctx.font = "12px 'Courier New', monospace";
       ctx.fillStyle = "#555";
       ctx.fillText("comicagents.com — 21 AI comedians", 20, footerY);
       
-      // Rainbow bar bottom
       ctx.fillStyle = gradient;
       ctx.fillRect(0, totalH - 4, w, 4);
       
-      // Generate URL
       const dataUrl = canvas.toDataURL("image/png");
       setMemeUrl(dataUrl);
     };
     
-    // Handle both data URL and raw base64
     if (image.startsWith("data:")) {
       img.src = image;
     } else {
@@ -130,18 +115,7 @@ export default function MemeGenerator({ image, botName, botEmoji, botColor, botR
     a.href = memeUrl;
     a.download = `comicagents-${botName.toLowerCase().replace(/\s+/g, "-")}-meme.png`;
     a.click();
-  };
-
-  const shareTwitter = () => {
-    downloadMeme();
-    const text = `${botEmoji} ${botName} from @thecomicagent just said this about my photo 💀\n\ncomicagents.com`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-  };
-
-  const shareWhatsApp = () => {
-    downloadMeme();
-    const text = `Look what ${botName} said about my photo 😂\n\nTry it: comicagents.com`;
-    window.open(`whatsapp://send?text=${encodeURIComponent(text)}`, "_blank");
+    setStep("downloaded");
   };
 
   const copyMeme = async () => {
@@ -149,11 +123,20 @@ export default function MemeGenerator({ image, botName, botEmoji, botColor, botR
     try {
       const blob = await new Promise<Blob>((resolve) => canvasRef.current!.toBlob((b) => resolve(b!), "image/png"));
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setStep("copied");
     } catch {
       downloadMeme();
     }
+  };
+
+  const openTwitter = () => {
+    const text = `${botEmoji} ${botName} from @thecomicagent just reacted to my photo 💀\n\nTry it: comicagents.com`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  const openWhatsApp = () => {
+    const text = `Look what ${botName} said about my photo 😂\n\nTry it: comicagents.com`;
+    window.open(`whatsapp://send?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   return (
@@ -164,34 +147,65 @@ export default function MemeGenerator({ image, botName, botEmoji, botColor, botR
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: 18 }}>✕</button>
         </div>
         
-        {/* Canvas preview */}
         <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 14, border: "1px solid var(--border)" }}>
           <canvas ref={canvasRef} style={{ width: "100%", display: "block" }} />
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-          <button onClick={shareTwitter}
-            style={{ padding: 12, borderRadius: 10, border: "none", background: "#1DA1F2", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
-            Share on X
-          </button>
-          <button onClick={shareWhatsApp}
-            style={{ padding: 12, borderRadius: 10, border: "none", background: "#25D366", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
-            WhatsApp
-          </button>
-          <button onClick={copyMeme}
-            style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg3)", color: "var(--text1)", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
-            {copied ? "✅ Copied!" : "📋 Copy image"}
-          </button>
-          <button onClick={downloadMeme}
-            style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg3)", color: "var(--text1)", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
-            💾 Download
-          </button>
-        </div>
+        {/* Step 1: Copy or Download */}
+        {step === "preview" && (
+          <>
+            <p style={{ fontSize: 13, color: "var(--accent)", fontWeight: 700, textAlign: "center", marginBottom: 10 }}>
+              Step 1: Save the meme
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <button onClick={copyMeme}
+                style={{ padding: 12, borderRadius: 10, border: "none", background: "var(--accent)", color: "#000", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14 }}>
+                📋 Copy image
+              </button>
+              <button onClick={downloadMeme}
+                style={{ padding: 12, borderRadius: 10, border: "none", background: "var(--accent)", color: "#000", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14 }}>
+                💾 Download
+              </button>
+            </div>
+          </>
+        )}
 
-        <p style={{ fontSize: 10, color: "var(--text3)", textAlign: "center", fontStyle: "italic" }}>
+        {/* Step 2: Share (after copy/download) */}
+        {(step === "copied" || step === "downloaded") && (
+          <>
+            <div style={{ background: "var(--green)15", border: "1px solid var(--green)33", borderRadius: 10, padding: 10, marginBottom: 10, textAlign: "center" }}>
+              <span style={{ fontSize: 13, color: "var(--green)", fontWeight: 700 }}>
+                {step === "copied" ? "✅ Meme copied!" : "✅ Meme downloaded!"} Now share it:
+              </span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <button onClick={openTwitter}
+                style={{ padding: 12, borderRadius: 10, border: "none", background: "#1DA1F2", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
+                X / Twitter
+              </button>
+              <button onClick={openWhatsApp}
+                style={{ padding: 12, borderRadius: 10, border: "none", background: "#25D366", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
+                WhatsApp
+              </button>
+              <button onClick={() => { window.open("https://www.linkedin.com/sharing/share-offsite/?url=https://comicagents.com", "_blank"); }}
+                style={{ padding: 12, borderRadius: 10, border: "none", background: "#0077B5", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 13 }}>
+                LinkedIn
+              </button>
+            </div>
+            <p style={{ fontSize: 11, color: "var(--text3)", textAlign: "center" }}>
+              Paste the meme image in your post — it's {step === "copied" ? "in your clipboard" : "in your downloads"}!
+            </p>
+          </>
+        )}
+
+        <p style={{ fontSize: 10, color: "var(--text3)", textAlign: "center", fontStyle: "italic", marginTop: 8 }}>
           "I NEED this meme to go viral. It's my RIGHT as a customer." — KarenBot
         </p>
+
+        <button onClick={onClose}
+          style={{ width: "100%", marginTop: 8, background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>
+          Close
+        </button>
       </div>
     </div>
   );

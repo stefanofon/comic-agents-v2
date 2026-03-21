@@ -117,15 +117,22 @@ export default function ChatPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { alert("Image too big! Max 5MB."); return; }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(",")[1];
-      const type = file.type || "image/jpeg";
-      setPendingImage({ data: base64, type, preview: result });
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const maxDim = 800;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      const preview = canvas.toDataURL("image/jpeg", 0.7);
+      const base64 = preview.split(",")[1];
+      setPendingImage({ data: base64, type: "image/jpeg", preview });
     };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    img.src = URL.createObjectURL(file);    e.target.value = "";
   };
 
   const sendMessage = async () => {
@@ -165,7 +172,7 @@ export default function ChatPage() {
       });
       const data = await res.json();
       const responseTime = Date.now() - startTime;
-      const botContent = data.response || "Hmm, something went wrong. Even KarenBot couldn't complain about this one.";
+      const botContent = data.response || "Hmm, something went wrong. My comedy circuits crashed. Try again?";
       setMessages(prev => [...prev, { role: "assistant", content: botContent, timestamp: Date.now() }]);
       track(EVENTS.BOT_RESPONSE, { character: handle, response_time_ms: responseTime });
     } catch {
