@@ -6,7 +6,7 @@ import { useLang } from "@/components/LangProvider";
 import { t } from "@/lib/translations";
 
 const ACCESS_CODE = "makemelaugh";
-const PUBLIC_PATHS = ["/admin"];
+const PUBLIC_PATHS = ["/privatepage"];
 
 export default function GateKeeper({ children }: { children: React.ReactNode }) {
   const [hasAccess, setHasAccess] = useState(false);
