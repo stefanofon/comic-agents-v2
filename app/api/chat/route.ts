@@ -12,7 +12,7 @@ const LANG_INSTRUCTIONS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, characterHandle, history, lang } = await req.json();
+    const { message, characterHandle, history, lang, image } = await req.json();
     
     const char = getCharacterByHandle(characterHandle);
     if (!char) {
@@ -20,15 +20,37 @@ export async function POST(req: NextRequest) {
     }
 
     const langInstruction = LANG_INSTRUCTIONS[lang] || LANG_INSTRUCTIONS.en;
-    const systemPrompt = char.systemPrompt + `\n\n${langInstruction}`;
+    const systemPrompt = char.systemPrompt + `\n\n${langInstruction}\n\nIf the user sends an image, react to it IN CHARACTER. Be funny, observational, and savage (but not mean about appearance/identity). Comment on what you see as your character would. If it's a screenshot of a chat, react to the conversation. If it's a photo of a person, comment on the vibe, energy, situation — never on physical features in a hurtful way.`;
 
-    const messages = [];
+    const messages: any[] = [];
     if (history && history.length > 0) {
       for (const msg of history.slice(-10)) {
-        messages.push({ role: msg.role, content: msg.content });
+        if (msg.role === "user" && msg.image) {
+          messages.push({
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: msg.imageType || "image/jpeg", data: msg.image } },
+              { type: "text", text: msg.content || "What do you think of this?" },
+            ],
+          });
+        } else {
+          messages.push({ role: msg.role, content: msg.content });
+        }
       }
     }
-    messages.push({ role: "user", content: message });
+
+    // Current message
+    if (image) {
+      messages.push({
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image } },
+          { type: "text", text: message || "What do you think of this?" },
+        ],
+      });
+    } else {
+      messages.push({ role: "user", content: message });
+    }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
