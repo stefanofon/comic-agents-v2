@@ -13,12 +13,12 @@ export const metadata: Metadata = {
     description: "Chat with AI comedians that actually make you laugh. 21 original characters, each more unhinged than the last.",
     url: "https://comicagents.com",
     siteName: "Comic Agents",
-    type: "website",
+    type: "website", images: [{ url: "https://comicagents.com/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Comic Agents",
-    description: "AI characters that are actually funny. Chat with KarenBot, BroGPT, RoastMaster 9000, and 18 more.",
+    description: "AI characters that are actually funny. Chat with KarenBot, BroGPT, RoastMaster 9000, and 18 more.", images: ["https://comicagents.com/og-image.png"],
   },
 };
 
