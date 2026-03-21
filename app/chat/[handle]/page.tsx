@@ -5,6 +5,7 @@ import { CharacterViralJokes } from "@/components/ViralJokes";
 import GameButtons from "@/components/GameButtons";
 import LangSelector from "@/components/LangSelector";
 import ShareToUnlock from "@/components/ShareToUnlock";
+import MemeGenerator from "@/components/MemeGenerator";
 import { useLang } from "@/components/LangProvider";
 import { track, EVENTS } from "@/lib/analytics";
 import { canSendMessage, useMessage, getRemainingMessages, canUnlockMoreMessages, unlockMoreMessages } from "@/lib/usage";
@@ -68,6 +69,7 @@ export default function ChatPage() {
   const [activeTab, setActiveTab] = useState<"chat" | "jokes">("chat");
   const [showUnlock, setShowUnlock] = useState(false);
   const [remaining, setRemaining] = useState(5);
+  const [memeData, setMemeData] = useState<{ image: string; botResponse: string } | null>(null);
   const [pendingImage, setPendingImage] = useState<{ data: string; type: string; preview: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -178,6 +180,7 @@ export default function ChatPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      {memeData && <MemeGenerator image={memeData.image} botName={char.name} botEmoji={char.emoji} botColor={char.color} botResponse={memeData.botResponse} onClose={() => setMemeData(null)} />}
       {shareData && <ShareCard char={char} userMsg={shareData.userMsg} botMsg={shareData.botMsg} onClose={() => setShareData(null)} />}
       {showUnlock && (
         <ShareToUnlock type="messages" remaining={getRemainingMessages()} canUnlock={canUnlockMoreMessages()}
@@ -235,8 +238,15 @@ export default function ChatPage() {
                 <div style={{ display: "flex", gap: 8, marginTop: 4, alignItems: "center" }}>
                   <span style={{ fontSize: 10, color: "var(--text3)" }}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                   {msg.role === "assistant" && i > 0 && (
-                    <button onClick={() => { setShareData({ userMsg: messages[i - 1]?.content || "", botMsg: msg.content }); }}
-                      style={{ fontSize: 10, color: "var(--cyan)", background: "none", border: "1px solid var(--cyan)33", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}>Share 🔗</button>
+                    <button onClick={() => {
+                        const prevMsg = messages[i - 1];
+                        if (prevMsg?.image) {
+                          setMemeData({ image: prevMsg.image, botResponse: msg.content });
+                        } else {
+                          setShareData({ userMsg: prevMsg?.content || "", botMsg: msg.content });
+                        }
+                      }}
+                      style={{ fontSize: 10, color: "var(--cyan)", background: "none", border: "1px solid var(--cyan)33", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}>{messages[i-1]?.image ? "🎨 Meme" : "Share 🔗"}</button>
                   )}
                 </div>
               </div>
