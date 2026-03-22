@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import LangSelector from "@/components/LangSelector";
 import { useLang } from "@/components/LangProvider";
 import { t } from "@/lib/translations";
+import { getActiveCharacters } from "@/lib/characters";
+import { viralJokes } from "@/lib/viral-jokes";
 
 const ACCESS_CODE = "makemelaugh";
 const PUBLIC_PATHS = ["/privatepage"];
@@ -26,6 +28,36 @@ export default function GateKeeper({ children }: { children: React.ReactNode }) 
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [shared, setShared] = useState(false);
   const { lang } = useLang();
+
+  // Build rotating quotes from all active bots
+  const [rotatingQuotes] = useState(() => {
+    const chars = getActiveCharacters();
+    const pool: { emoji: string; name: string; joke: string; color: string }[] = [];
+    chars.forEach(char => {
+      const jokes = (viralJokes as Record<string, string[]>)[char.handle] || [];
+      // Pick 2 random jokes per bot
+      const picked = [...jokes].sort(() => Math.random() - 0.5).slice(0, 2);
+      picked.forEach(j => pool.push({ emoji: char.emoji, name: char.name, joke: j.length > 100 ? j.slice(0, 97) + "..." : j, color: char.color }));
+      // Also include the sampleJoke
+      pool.push({ emoji: char.emoji, name: char.name, joke: char.sampleJoke.length > 100 ? char.sampleJoke.slice(0, 97) + "..." : char.sampleJoke, color: char.color });
+    });
+    return pool.sort(() => Math.random() - 0.5);
+  });
+  const [quoteIdx, setQuoteIdx] = useState(0);
+  const [quoteFading, setQuoteFading] = useState(false);
+
+  // Rotate bottom quote every 5s
+  useEffect(() => {
+    if (rotatingQuotes.length <= 1) return;
+    const interval = setInterval(() => {
+      setQuoteFading(true);
+      setTimeout(() => {
+        setQuoteIdx(prev => (prev + 1) % rotatingQuotes.length);
+        setQuoteFading(false);
+      }, 400);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [rotatingQuotes.length]);
 
   useEffect(() => {
     const access = localStorage.getItem("ca_access");
@@ -178,7 +210,7 @@ export default function GateKeeper({ children }: { children: React.ReactNode }) 
 
               {/* Three options */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <button className="btn-primary" onClick={() => {
+                <button className="btn-primary glow-pulse" onClick={() => {
                   if (!disclaimer) { setErrorMsg("Please accept the terms first."); return; }
                   if (!name.trim() || !email.trim()) { setErrorMsg("Enter name and email first!"); return; }
                   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErrorMsg("Invalid email."); return; }
@@ -188,8 +220,8 @@ export default function GateKeeper({ children }: { children: React.ReactNode }) 
                 </button>
 
                 <button onClick={submitRequest} disabled={!email.trim() || !name.trim()}
-                  style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg3)", color: "var(--text2)", cursor: "pointer", fontFamily: "inherit", fontSize: 13, opacity: !email.trim() || !name.trim() ? 0.5 : 1 }}>
-                  Join the waitlist (we'll email you when approved)
+                  style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid var(--cyan)44", background: "rgba(6, 182, 212, 0.1)", color: "var(--cyan)", cursor: "pointer", fontFamily: "inherit", fontSize: 13, opacity: !email.trim() || !name.trim() ? 0.5 : 1, transition: "all 0.3s" }}>
+                  Join the waitlist (we&apos;ll email you when approved)
                 </button>
 
                 <div style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 4 }}>
@@ -319,9 +351,18 @@ export default function GateKeeper({ children }: { children: React.ReactNode }) 
             <span style={{ fontSize: 12, color: "var(--text3)", display: "flex", alignItems: "center", padding: "0 8px" }}>+5 more</span>
           </div>
 
-          <p style={{ marginTop: 32, fontSize: 10, color: "var(--text3)", fontStyle: "italic" }}>
-            "Per my last message, I did say this would be exclusive 😊" — PassiveAggressiveBot
-          </p>
+          <div style={{ marginTop: 32, minHeight: 50, textAlign: "center", overflow: "hidden" }}>
+            {rotatingQuotes.length > 0 && (
+              <div className={quoteFading ? "quote-exit" : "quote-enter"} key={quoteIdx} style={{ display: "inline-block" }}>
+                <p style={{ fontSize: 11, color: rotatingQuotes[quoteIdx].color, fontStyle: "italic", opacity: 0.8, lineHeight: 1.6, margin: 0 }}>
+                  &ldquo;{rotatingQuotes[quoteIdx].joke}&rdquo;
+                </p>
+                <p style={{ fontSize: 10, color: "var(--text3)", margin: "4px 0 0" }}>
+                  — {rotatingQuotes[quoteIdx].emoji} {rotatingQuotes[quoteIdx].name}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

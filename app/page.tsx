@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getAllCharacters, getActiveCharacters, getComingSoonCharacters } from "@/lib/characters";
+import { viralJokes } from "@/lib/viral-jokes";
 import { t } from "@/lib/translations";
 import { getCharTranslation } from "@/lib/char-translations";
 import { FeaturedViralJokes } from "@/components/ViralJokes";
@@ -18,6 +19,19 @@ function formatNumber(n: number) {
 function BotCard({ char, index, lang }: { char: any; index: number; lang: string }) {
   const [count, setCount] = useState(char.fakeStats.interactions);
   
+  // Build pool of quotes: sampleJoke + viral jokes for this bot
+  const buildQuotePool = useCallback(() => {
+    const baseJoke = getCharTranslation(char.handle, lang, "sampleJoke") || char.sampleJoke;
+    const extras = (viralJokes as Record<string, string[]>)[char.handle] || [];
+    // Take up to 8 viral jokes for variety without overwhelming
+    const shuffled = [...extras].sort(() => Math.random() - 0.5).slice(0, 8);
+    return [baseJoke, ...shuffled];
+  }, [char.handle, char.sampleJoke, lang]);
+
+  const [quotePool] = useState(buildQuotePool);
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [isFading, setIsFading] = useState(false);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCount((c: number) => c + Math.floor(Math.random() * 3) + 1);
@@ -25,9 +39,23 @@ function BotCard({ char, index, lang }: { char: any; index: number; lang: string
     return () => clearInterval(interval);
   }, []);
 
+  // Rotate quotes at different intervals per bot (6-14s, offset by index)
+  useEffect(() => {
+    if (quotePool.length <= 1) return;
+    const baseInterval = 6000 + (index * 1700) % 8000; // Desynchronize per bot
+    const interval = setInterval(() => {
+      setIsFading(true);
+      setTimeout(() => {
+        setQuoteIndex(prev => (prev + 1) % quotePool.length);
+        setIsFading(false);
+      }, 400); // Match quoteFadeOut duration
+    }, baseInterval);
+    return () => clearInterval(interval);
+  }, [quotePool.length, index]);
+
   const isComingSoon = char.comingSoon;
   const tagline = getCharTranslation(char.handle, lang, "tagline") || char.tagline;
-  const joke = getCharTranslation(char.handle, lang, "sampleJoke") || char.sampleJoke;
+  const currentQuote = quotePool[quoteIndex] || char.sampleJoke;
 
   const CardContent = (
     <div
@@ -54,9 +82,14 @@ function BotCard({ char, index, lang }: { char: any; index: number; lang: string
       <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 12 }}>{tagline}</div>
       <div style={{
         fontSize: 13, color: "var(--text2)", lineHeight: 1.6, marginBottom: 16,
-        fontStyle: "italic", minHeight: 40,
+        fontStyle: "italic", minHeight: 60,
         borderLeft: `2px solid ${char.color}44`, paddingLeft: 12,
-      }}>&ldquo;{joke}&rdquo;</div>
+        overflow: "hidden",
+      }}>
+        <div className={isFading ? "quote-exit" : "quote-enter"} key={quoteIndex}>
+          &ldquo;{currentQuote.length > 120 ? currentQuote.slice(0, 117) + "..." : currentQuote}&rdquo;
+        </div>
+      </div>
       <div style={{ display: "flex", gap: 16, fontSize: 11, color: "var(--text3)" }}>
         <span className="counter">💬 {formatNumber(count)} {t(lang, "chats")}</span>
         <span className="counter">🔗 {formatNumber(char.fakeStats.shares)} {t(lang, "shares")}</span>
