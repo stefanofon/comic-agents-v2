@@ -73,6 +73,11 @@ body::before {
   border-color: var(--accent);
   box-shadow: 0 8px 30px rgba(168, 85, 247, 0.15);
 }
+.bot-card.coming-soon {
+  pointer-events: none;
+  cursor: default;
+  position: relative;
+}
 
 /* Chat bubble */
 .chat-bubble-user {

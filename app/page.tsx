@@ -59,24 +59,14 @@ function BotCard({ char, index, lang }: { char: any; index: number; lang: string
 
   const CardContent = (
     <div
-      className="bot-card animate-fade-in"
+      className={`bot-card animate-fade-in${isComingSoon ? " coming-soon" : ""}`}
       style={{
         animationDelay: `${index * 0.05}s`,
         background: "var(--bg2)",
-        border: `1px solid ${isComingSoon ? "var(--border)" : char.color + "33"}`,
+        border: `1px solid ${char.color + "33"}`,
         borderRadius: 16, padding: 20, position: "relative",
-        opacity: isComingSoon ? 0.6 : 1,
       }}
     >
-      <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 6, alignItems: "center" }}>
-        {isComingSoon && <span className="coming-soon-badge">{t(lang, "comingSoonBadge")}</span>}
-        <span style={{
-          fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
-          background: char.tier === "S" ? "#EF444422" : char.tier === "A" ? "#F59E0B22" : "#64748B22",
-          color: char.tier === "S" ? "#EF4444" : char.tier === "A" ? "#F59E0B" : "#64748B",
-          border: `1px solid ${char.tier === "S" ? "#EF444444" : char.tier === "A" ? "#F59E0B44" : "#64748B44"}`,
-        }}>TIER {char.tier}</span>
-      </div>
       <div style={{ fontSize: 36, marginBottom: 8 }}>{char.emoji}</div>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: char.color, marginBottom: 4 }}>{char.name}</div>
       <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 12 }}>{tagline}</div>
@@ -97,6 +87,14 @@ function BotCard({ char, index, lang }: { char: any; index: number; lang: string
       {!isComingSoon && (
         <div style={{ position: "absolute", bottom: 12, right: 16, fontSize: 11, color: char.color, opacity: 0.6 }}>{t(lang, "chat")} →</div>
       )}
+      {isComingSoon && (
+        <div style={{
+          position: "absolute", inset: 0, background: "rgba(10,10,10,0.5)",
+          borderRadius: 16, zIndex: 2, display: "flex", alignItems: "center",
+          justifyContent: "center", fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 14, fontWeight: 700, letterSpacing: 3, color: "rgba(255,255,255,0.6)",
+        }}>COMING SOON</div>
+      )}
     </div>
   );
 
@@ -110,6 +108,7 @@ export default function HomePage() {
   const { lang } = useLang();
   const activeChars = getActiveCharacters();
   const comingSoonChars = getComingSoonCharacters();
+  const allChars = [...activeChars, ...comingSoonChars];
 
   useEffect(() => {
     const saved = localStorage.getItem("comic_agents_user");
@@ -150,42 +149,40 @@ export default function HomePage() {
         <h1 className="animate-glitch" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 700, letterSpacing: 3, marginBottom: 8 }}>{t(lang, "heroTitle")}</h1>
         <p style={{ fontSize: 18, color: "var(--accent)", marginBottom: 12 }}>{t(lang, "heroSub")}</p>
         <p style={{ fontSize: 15, color: "var(--text2)", lineHeight: 1.7, maxWidth: 500, margin: "0 auto 8px" }}>{t(lang, "heroDesc")}</p>
-        <p style={{ fontSize: 13, color: "var(--text3)", marginBottom: 0 }}>{t(lang, "heroJoke")}</p>
+        <p style={{ fontSize: 13, color: "var(--text3)", marginBottom: 16 }}>{t(lang, "heroJoke")}</p>
+        {/* Quick play buttons */}
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+          <Link href="/feed" style={{ textDecoration: "none", padding: "10px 20px", borderRadius: 99, background: "var(--accent)22", border: "1px solid var(--accent)44", color: "var(--accent)", fontSize: 13, fontWeight: 700, transition: "all 0.2s" }}>😂 Joke Feed</Link>
+          <Link href="/daily" style={{ textDecoration: "none", padding: "10px 20px", borderRadius: 99, background: "var(--yellow)22", border: "1px solid var(--yellow)44", color: "var(--yellow)", fontSize: 13, fontWeight: 700, transition: "all 0.2s" }}>📅 Daily Joke</Link>
+          <Link href="/swipe" style={{ textDecoration: "none", padding: "10px 20px", borderRadius: 99, background: "var(--pink)22", border: "1px solid var(--pink)44", color: "var(--pink)", fontSize: 13, fontWeight: 700, transition: "all 0.2s" }}>🔥 Swipe</Link>
+        </div>
       </section>
 
       <section style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 24px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700 }}>🎭 {t(lang, "chatWith")}</h2>
-          <span style={{ fontSize: 12, color: "var(--text3)" }}>{activeChars.length} {t(lang, "active")} • {comingSoonChars.length} {t(lang, "comingSoon")}</span>
+          <span style={{ fontSize: 12, color: "var(--text3)" }}>{allChars.length} {t(lang, "allBots").toLowerCase()}</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-          {activeChars.map((char, i) => (
-            <div key={char.handle} onClick={() => { if (!user) setShowAuth(true); }}>
+          {allChars.map((char, i) => (
+            <div key={char.handle} onClick={() => { if (!user && !char.comingSoon) setShowAuth(true); }}>
               <BotCard char={char} index={i} lang={lang} />
             </div>
           ))}
         </div>
       </section>
 
-      {comingSoonChars.length > 0 && (
-        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 24px" }}>
-          <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, marginBottom: 20 }}>🔜 {t(lang, "comingSoon")}</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-            {comingSoonChars.map((char, i) => (
-              <BotCard key={char.handle} char={char} index={i + activeChars.length} lang={lang} />
-            ))}
-          </div>
-        </section>
-      )}
-
       <section style={{ maxWidth: 1200, margin: "40px auto", padding: "0 24px" }}>
       <section style={{ maxWidth: 1200, margin: "20px auto", padding: "0 24px" }}>
         <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, marginBottom: 16 }}>🎮 Play with our comedians</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-          <Link href="/roastme/karenbot5000" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #EF444433", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🔥</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#EF4444", marginBottom: 4 }}>Get Roasted</div><div style={{ fontSize: 12, color: "var(--text3)" }}>Let a bot destroy you. Rate the savagery.</div></div></Link>
-          <Link href="/battle/karenbot5000" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #A855F733", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🥊</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#A855F7", marginBottom: 4 }}>Comedy Battle</div><div style={{ fontSize: 12, color: "var(--text3)" }}>Think you are funnier than AI?</div></div></Link>
-          <Link href="/quiz" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #F59E0B33", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🎯</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#F59E0B", marginBottom: 4 }}>Who Said It?</div><div style={{ fontSize: 12, color: "var(--text3)" }}>Guess which bot said the joke.</div></div></Link>
-          <Link href="/leaderboard" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #10B98133", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#10B981", marginBottom: 4 }}>Leaderboard</div><div style={{ fontSize: 12, color: "var(--text3)" }}>The funniest humans on the internet.</div></div></Link>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
+          <Link href="/swipe" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #EC489933", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>💘</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#EC4899", marginBottom: 4 }}>Swipe to Rate</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Tinder for jokes. Find your match.</div></div></Link>
+          <Link href="/roulette" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #A855F733", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🎰</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#A855F7", marginBottom: 4 }}>Roast Roulette</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Random bot, random roast. Zero effort.</div></div></Link>
+          <Link href="/botvbot" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #06B6D433", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🤖🥊🤖</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#06B6D4", marginBottom: 4 }}>Bot vs Bot</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Watch bots battle. You judge.</div></div></Link>
+          <Link href="/quiz" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #F59E0B33", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🎯</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#F59E0B", marginBottom: 4 }}>Who Said It?</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Guess which bot said the joke.</div></div></Link>
+          <Link href="/roastme/karenbot5000" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #EF444433", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🔥</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#EF4444", marginBottom: 4 }}>Get Roasted</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Let a bot destroy you. Rate it.</div></div></Link>
+          <Link href="/battle/karenbot5000" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #10B98133", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🥊</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#10B981", marginBottom: 4 }}>Comedy Battle</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Think you&apos;re funnier than AI?</div></div></Link>
+          <Link href="/leaderboard" style={{ textDecoration: "none" }}><div className="bot-card" style={{ background: "var(--bg2)", borderRadius: 16, padding: 20, border: "1px solid #64748B33", textAlign: "center" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div><div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: "#64748B", marginBottom: 4 }}>Leaderboard</div><div style={{ fontSize: 11, color: "var(--text3)" }}>The funniest humans online.</div></div></Link>
         </div>
       </section>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>

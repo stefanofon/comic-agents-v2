@@ -61,6 +61,57 @@ export default function ChatPage() {
   const char = getCharacterByHandle(handle);
   const { lang } = useLang();
 
+  const conversationStarters: Record<string, Array<{emoji: string; label: string; text: string}>> = {
+    karenbot5000: [
+      { emoji: "📞", label: "Call the manager", text: "I need to speak to your manager RIGHT NOW" },
+      { emoji: "⭐", label: "Leave a review", text: "I'm leaving a 1-star review for this conversation" },
+      { emoji: "📋", label: "File a complaint", text: "I have a list of complaints about today" },
+      { emoji: "😤", label: "Unacceptable!", text: "This service is UNACCEPTABLE" },
+    ],
+    brogpt: [
+      { emoji: "🚀", label: "Motivate me", text: "I need some motivation today" },
+      { emoji: "💼", label: "Career advice", text: "How do I become a CEO by next Tuesday?" },
+      { emoji: "🧵", label: "Write a thread", text: "Turn my morning routine into a LinkedIn post" },
+      { emoji: "📈", label: "Hustle wisdom", text: "What's your best business advice?" },
+    ],
+    gymbrobot: [
+      { emoji: "💪", label: "Life workout", text: "My life is a mess. Give me a workout plan for it" },
+      { emoji: "🧠", label: "Mental gains", text: "How do I get mental gains from this conversation?" },
+      { emoji: "🍕", label: "Cheat day", text: "I ate pizza for breakfast, how many reps to fix this?" },
+      { emoji: "😴", label: "Rest day excuse", text: "Can I take a rest day from life?" },
+    ],
+    cryptobrobot: [
+      { emoji: "📈", label: "Rate my day", text: "Rate my Monday: bullish or bearish?" },
+      { emoji: "💎", label: "Diamond hands", text: "My relationship is dipping, should I HODL?" },
+      { emoji: "🚀", label: "To the moon", text: "What's going to the moon today?" },
+      { emoji: "📊", label: "Portfolio check", text: "Analyze my life as a portfolio" },
+    ],
+    allybot: [
+      { emoji: "🌈", label: "Check my privilege", text: "Can you audit my privilege real quick?" },
+      { emoji: "⚠️", label: "Trigger warning", text: "I'm about to say the word 'Monday'" },
+      { emoji: "🏠", label: "Land acknowledgment", text: "Do a land acknowledgment for my apartment" },
+      { emoji: "✊", label: "Hold space", text: "Can you hold space while I order pizza?" },
+    ],
+    okboomerbot: [
+      { emoji: "📠", label: "Tech help", text: "Can you help me print this conversation?" },
+      { emoji: "📞", label: "Back in my day", text: "Tell me how things were better back in your day" },
+      { emoji: "👴", label: "Kevin!!", text: "Where is Kevin? I need help with the internet" },
+      { emoji: "📧", label: "Email tips", text: "How do I send an electronic mail?" },
+    ],
+    roastmaster9k: [
+      { emoji: "🔥", label: "Roast me", text: "Give me your best roast" },
+      { emoji: "👔", label: "Roast my job", text: "I'm a programmer, roast me" },
+      { emoji: "🍿", label: "Roast Monday", text: "Roast the concept of Monday mornings" },
+      { emoji: "📱", label: "Roast my phone", text: "Roast my screen time of 7 hours per day" },
+    ],
+    _default: [
+      { emoji: "👋", label: "Say hi", text: "Hey! What's your deal?" },
+      { emoji: "😂", label: "Make me laugh", text: "Tell me your best joke" },
+      { emoji: "🔥", label: "Roast me", text: "Give me your best roast" },
+      { emoji: "💡", label: "Life advice", text: "Give me life advice in your style" },
+    ],
+  };
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -185,6 +236,24 @@ export default function ChatPage() {
     inputRef.current?.focus();
   };
 
+  const sendStarter = (text: string) => {
+    if (loading) return;
+    if (!canSendMessage()) { setShowUnlock(true); return; }
+    const userMessage: Message = { role: "user", content: text, timestamp: Date.now() };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setLoading(true);
+    track(EVENTS.CHAT_MESSAGE, { character: handle, starter: true });
+    fetch("/api/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, characterHandle: handle, history: newMessages.slice(-10).map(m => ({ role: m.role, content: m.content })), lang }),
+    }).then(r => r.json()).then(data => {
+      setMessages(prev => [...prev, { role: "assistant", content: data.response || "My comedy circuits crashed. Try again?", timestamp: Date.now() }]);
+    }).catch(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "Oops! My comedy circuits are overloaded. Try again? 🤖💥", timestamp: Date.now() }]);
+    }).finally(() => { useMessage(); setRemaining(getRemainingMessages()); setLoading(false); });
+  };
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {memeData && <MemeGenerator image={memeData.image} botName={char.name} botEmoji={char.emoji} botColor={char.color} botResponse={memeData.botResponse} onClose={() => setMemeData(null)} />}
@@ -231,6 +300,24 @@ export default function ChatPage() {
       {activeTab === "chat" ? (
         <>
           <div style={{ flex: 1, overflow: "auto", padding: 20, maxWidth: 700, margin: "0 auto", width: "100%" }}>
+            {/* Conversation Starters - show when only welcome message exists */}
+            {messages.length <= 1 && !loading && (
+              <div className="animate-fade-in" style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 20, padding: "0 10px" }}>
+                {(conversationStarters[handle as keyof typeof conversationStarters] || conversationStarters._default).map((starter, idx) => (
+                  <button key={idx} onClick={() => sendStarter(starter.text)}
+                    style={{
+                      padding: "8px 14px", borderRadius: 99, fontSize: 12, fontFamily: "inherit",
+                      border: `1px solid ${char.color}33`, background: `${char.color}11`, color: "var(--text2)",
+                      cursor: "pointer", transition: "all 0.2s", whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = char.color + "33"; e.currentTarget.style.color = "var(--text1)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = char.color + "11"; e.currentTarget.style.color = "var(--text2)"; }}
+                  >
+                    {starter.emoji} {starter.label}
+                  </button>
+                ))}
+              </div>
+            )}
             {messages.map((msg, i) => (
               <div key={i} style={{ marginBottom: 16, display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
                 {msg.image && (

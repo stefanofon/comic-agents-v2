@@ -329,11 +329,11 @@ export default function GateKeeper({ children }: { children: React.ReactNode }) 
           {/* Teaser */}
           <div style={{ marginTop: 32, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
             {[
-              { emoji: "💬", title: "Chat", desc: "Talk with 21 AI comedians" },
-              { emoji: "🔥", title: "Get roasted", desc: "Let bots destroy you (lovingly)" },
-              { emoji: "🥊", title: "Comedy battle", desc: "Think you're funnier than AI?" },
+              { emoji: "💘", title: "Swipe & Rate", desc: "Tinder for jokes, find your match" },
+              { emoji: "🎰", title: "Roast Roulette", desc: "Random roasts, zero typing" },
+              { emoji: "🤖🥊🤖", title: "Bot vs Bot", desc: "Watch bots battle, you judge" },
               { emoji: "🎯", title: "Who said it?", desc: "Guess which bot said it" },
-              { emoji: "📤", title: "Share", desc: "Screenshot-ready comedy gold" },
+              { emoji: "🔥", title: "Get roasted", desc: "Let bots destroy you (lovingly)" },
               { emoji: "🌍", title: "6 languages", desc: "Comedy without borders" },
             ].map((item, i) => (
               <div key={i} style={{ background: "var(--bg2)", borderRadius: 12, padding: 14, border: "1px solid var(--border)", textAlign: "center" }}>
